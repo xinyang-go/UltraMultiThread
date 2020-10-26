@@ -12,6 +12,10 @@
 
 namespace umt {
 
+    /**
+     * @brief 辅助类，导出public构造函数
+     * @tparam T 需要导出导出public构造函数的类型
+     */
     template<class T>
     class ExportPublicConstructor : public T {
     public:
@@ -19,23 +23,37 @@ namespace umt {
         explicit ExportPublicConstructor(Ts &&...args): T(std::forward<Ts>(args)...) {}
     };
 
+    /**
+     * @brief 命名对象异常类型
+     */
     class NamedObjException : public std::logic_error {
     public:
         using std::logic_error::logic_error;
     };
 
+    /**
+     * @brief 命名对象创建异常类型
+     */
     class NamedObjCreateException : public NamedObjException {
     public:
         explicit NamedObjCreateException(const std::string &name)
                 : NamedObjException(fmt::format("Name '{}' already exist.", name)) {}
     };
 
+    /**
+     * @brief 命名对象查找异常类型
+     */
     class NamedObjFindException : public NamedObjException {
     public:
         explicit NamedObjFindException(const std::string &name)
                 : NamedObjException(fmt::format("Name '{}' do not exist.", name)) {}
     };
 
+    /**
+     * @brief 共享命名对象类型
+     * @details 类型和名称共同唯一确定一个共享对象。这意味着不同类型之间可以出现重名对象。
+     * @tparam T 对象数据类型
+     */
     template<class T>
     class NamedObj : public T {
     public:
@@ -44,6 +62,13 @@ namespace umt {
         using sPtr = std::shared_ptr<ObjType>;
         using wPtr = std::weak_ptr<ObjType>;
 
+        /**
+         * @brief 创建共享命名对象。该对象已存在则会抛出异常。
+         * @tparam Ts 创建对象时，构造函数的参数类型
+         * @param name 对象名称
+         * @param args 创建对象时，构造函数的参数
+         * @return 创建好的共享命名对象
+         */
         template<class ...Ts>
         static sPtr create(const std::string &name, Ts &&...args) {
             std::unique_lock lock(mtx_);
@@ -53,15 +78,27 @@ namespace umt {
             return obj;
         }
 
+        /**
+         * @brief 查找共享命名对象。该对象不存在则会抛出异常。
+         * @param name 对象名称
+         * @return 查找到的共享命名对象
+         */
         static sPtr find(const std::string &name) {
             std::unique_lock lock(mtx_);
             auto iter = map_.find(name);
             if (iter == map_.end()) throw NamedObjFindException(name);
             const auto &wptr = iter->second;
-            if (wptr.expired()) throw NamedObjException("Unexpected error: empty weak_ptr. This is an internal bug!");
+            if (wptr.expired()) throw NamedObjFindException(name);
             return wptr.lock();
         }
 
+        /**
+         * @brief 尝试查找一个共享命名对象，如果不存在则创建它
+         * @tparam Ts 创建对象时，构造函数的参数类型
+         * @param name 对象名称
+         * @param args 创建对象时，构造函数的参数类型
+         * @return 查找到或创建好的共享命名对象
+         */
         template<class ...Ts>
         static sPtr find_or_create(const std::string &name, Ts &&...args) {
             try {
@@ -71,6 +108,9 @@ namespace umt {
             }
         }
 
+        /**
+         * @brief 析构函数，将自己从对象列表中删除
+         */
         ~NamedObj() {
             std::unique_lock lock(mtx_);
             map_.erase(name_);
