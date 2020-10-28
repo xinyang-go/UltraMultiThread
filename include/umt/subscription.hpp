@@ -68,9 +68,7 @@ namespace umt {
     class Subscriber {
         friend class Publisher<T>;
 
-    public:
-        using DataType = T;
-
+    protected:
         Subscriber() = default;
 
         explicit Subscriber(const std::string &name) {
@@ -100,6 +98,9 @@ namespace umt {
             pipe_ = std::move(other.pipe_);
             return *this;
         }
+
+    public:
+        using DataType = T;
 
         virtual ~Subscriber() {
             Subscriber::reset();
@@ -224,10 +225,10 @@ namespace umt {
      * @brief 常规订阅器
      * @details 使用容器缓存接受到的消息，有最大缓存上限。
      * @tparam T 消息数据类型
-     * @tparam SIZE 最大缓存上限
+     * @tparam SIZE 最大缓存上限，为0则无上限
      * @tparam C 容器类型
      */
-    template<class T, size_t SIZE = 1, class C=std::queue<T>>
+    template<class T, size_t SIZE = 0, class C=std::queue<T>>
     class NormalSub : public Subscriber<T> {
     public:
         using DataType = T;
@@ -258,12 +259,13 @@ namespace umt {
         }
 
         void read(DataType &obj) override {
-            obj = cache_.front();
+            obj = std::move(cache_.front());
             cache_.pop();
         }
 
         void write(const DataType &obj) override {
             cache_.push(obj);
+            if constexpr (CacheSize == 0) return;
             if (cache_.size() > CacheSize) {
                 cache_.pop();
             }

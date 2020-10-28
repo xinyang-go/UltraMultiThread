@@ -101,10 +101,16 @@ namespace umt {
          */
         template<class ...Ts>
         static sPtr find_or_create(const std::string &name, Ts &&...args) {
-            try {
-                return find(name);
-            } catch (const NamedObjFindException &e) {
-                return create(name, std::forward<Ts>(args)...);
+            std::unique_lock lock(mtx_);
+            auto iter = map_.find(name);
+            if (iter == map_.end()) {
+                sPtr obj = std::make_shared<ExportPublicConstructor<NamedObj>>(name, std::forward<Ts>(args)...);
+                map_.emplace(name, obj);
+                return obj;
+            } else {
+                const auto &wptr = iter->second;
+                if (wptr.expired()) throw NamedObjFindException(name);
+                return wptr.lock();
             }
         }
 

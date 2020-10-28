@@ -48,12 +48,12 @@ void subscriber() {
     std::this_thread::sleep_for(10ms);
 
     // 创建一个订阅器，消息数据类型为msg_t
-    umt::NormalSub<msg_t> s_tmp;
+    umt::NormalSub<msg_t, 1> s_tmp;
     // 订阅器绑定到名称为"time-0"的消息对象，如果该对象不存在则会抛出异常
     s_tmp.bind("time-0");
 
     // 订阅器类型支持移动构造，但不支持拷贝构造
-    umt::NormalSub<msg_t> s0 = std::move(s_tmp);
+    umt::NormalSub<msg_t, 1> s0 = std::move(s_tmp);
 
     msg_t msg;
     time_point_t t2;
