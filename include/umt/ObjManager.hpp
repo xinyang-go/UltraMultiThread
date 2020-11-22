@@ -32,10 +32,6 @@ namespace umt {
      */
     template<class T>
     class ObjManager : public T {
-        static_assert(std::is_class_v<T>, "ObjManager can be only used on the type of class.");
-    private:
-
-
     public:
         using sptr = std::shared_ptr<T>;
         using wptr = std::weak_ptr<T>;
