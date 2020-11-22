@@ -13,6 +13,16 @@
 namespace umt {
 
     /**
+     * @brief 用于导出protect构造函数为public，方便使用std::make_shared创建共享对象
+     */
+    template<class T>
+    class ExportPublicConstructor : public T {
+    public:
+        template<class ...Ts>
+        explicit ExportPublicConstructor(Ts &&...args): T(std::forward<Ts>(args)...) {}
+    };
+
+    /**
      * @brief 命名共享对象管理器
      * @details 通过对象类型和对象名称唯一确定一个共享对象（即std::shared_ptr）
      *          此对象管理器不可用于非class的基本类型（即无法用于int，double等类型）
@@ -24,14 +34,7 @@ namespace umt {
     class ObjManager : public T {
         static_assert(std::is_class_v<T>, "ObjManager can be only used on the type of class.");
     private:
-        /**
-         * @brief 用于导出ObjManager的protect构造函数，方便使用std::make_shared创建共享对象
-         */
-        class ObjManager_Export : public ObjManager<T> {
-        public:
-            template<class ...Ts>
-            ObjManager_Export(Ts &&...args): ObjManager<T>(std::forward<Ts>(args)...) {}
-        };
+
 
     public:
         using sptr = std::shared_ptr<T>;
@@ -48,7 +51,7 @@ namespace umt {
         static sptr create(const std::string &name, Ts &&...args) {
             std::unique_lock lock(_mtx);
             if (_map.find(name) != _map.end()) return nullptr;
-            sptr p_obj = std::make_shared<ObjManager_Export>(name, std::forward<Ts>(args)...);
+            sptr p_obj = std::make_shared<ExportPublicConstructor<ObjManager<T>>>(name, std::forward<Ts>(args)...);
             _map.emplace(name, p_obj);
             return p_obj;
         }
@@ -116,6 +119,7 @@ namespace umt {
 }
 
 #ifdef _UMT_WITH_BOOST_PYTHON_
+
 #include <boost/python.hpp>
 
 /// 导出一个类型的对象管理器至python（被管理的对象类型本身需要另外手动导出至python）。
