@@ -1,14 +1,17 @@
 import time
 
 # 通过导出的ObjManager类，查找相应的命名共享对象
-# p_foo对应std::shared_ptr<foo>对象
-p_foo = ObjManager_foo.find("obj-foo-0")
-# obj()函数对应从std::shared_ptr<foo>中得到对应的foo对象
-f = p_foo.obj()
+f = ObjManager_foo.find("obj-foo-0")
 # 打印当前foo对象值
 print(f"f={{.x={f.x}, .y={f.y}}}")
 # 修改foo对象值
 f.x, f.y = 12, 34
+
+# 遍历ObjManager_foo下的所有命名共享对象
+for name in ObjManager_foo.names():
+    f = ObjManager_foo.find(name)
+    if f is not None:
+        print(f"{name}: {{.x={f.x}, .y={f.y}}}")
 
 # 通过导出的Sync类，得出对应的同步对象
 sync = Sync_int("sync-0")

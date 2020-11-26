@@ -7,6 +7,7 @@
 
 #include <mutex>
 #include <memory>
+#include <vector>
 #include <unordered_map>
 
 
@@ -74,9 +75,20 @@ namespace umt {
         template<class ...Ts>
         static sptr find_or_create(const std::string &name, Ts &&...args) {
             std::unique_lock lock(_mtx);
-            auto p_obj = find(name);
-            if (p_obj) return p_obj;
-            else return create(name, std::forward<Ts>(args)...);
+            auto iter = _map.find(name);
+            if (iter != _map.end()) return iter->second.lock();
+            sptr p_obj = std::make_shared<ExportPublicConstructor<ObjManager<T>>>(name, std::forward<Ts>(args)...);
+            _map.emplace(name, p_obj);
+            return p_obj;
+        }
+
+        static std::vector<std::string> names() {
+            std::unique_lock lock(_mtx);
+            std::vector<std::string> _names;
+            for (const auto[n, w]: _map) {
+                _names.emplace_back(n);
+            }
+            return _names;
         }
 
         /**
@@ -102,13 +114,13 @@ namespace umt {
         std::string _name;
 
         /// 全局map互斥锁
-        static std::recursive_mutex _mtx;
+        static std::mutex _mtx;
         /// 对象map，用于查找命名对象
         static std::unordered_map<std::string, wptr> _map;
     };
 
     template<class T>
-    inline std::recursive_mutex ObjManager<T>::_mtx;
+    inline std::mutex ObjManager<T>::_mtx;
 
     template<class T>
     inline std::unordered_map<std::string, typename ObjManager<T>::wptr> ObjManager<T>::_map;
@@ -117,6 +129,7 @@ namespace umt {
 #ifdef _UMT_WITH_BOOST_PYTHON_
 
 #include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 
 /// 导出一个类型的对象管理器至python（被管理的对象类型本身需要另外手动导出至python）。
 #define UMT_EXPORT_PYTHON_OBJ_MANAGER(type) do{                                         \
@@ -127,9 +140,11 @@ namespace umt {
     class_<ObjManager<type>>("ObjManager_"#type, no_init)                               \
         .def("create", &ObjManager<type>::create<>)                                     \
         .def("find", &ObjManager<type>::find)                                           \
-        .def("find_or_create", &ObjManager<type>::find_or_create<>);                    \
-    class_<std::shared_ptr<type>>("sptr_"#type, no_init)                                \
-        .def("obj", &std::shared_ptr<type>::operator*, return_internal_reference<>());  \
+        .def("find_or_create", &ObjManager<type>::find_or_create<>)                     \
+        .def("names", &ObjManager<type>::names);                                        \
+    register_ptr_to_python<std::shared_ptr<type>>();                                    \
+    class_<std::vector<std::string>>("vector_string")                                   \
+        .def(vector_indexing_suite<std::vector<std::string>>());                                                  \
 }while(0)
 
 #endif /* _UMT_WITH_BOOST_PYTHON_ */
