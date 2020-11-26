@@ -308,6 +308,7 @@ namespace umt {
     using namespace boost::python;                  \
     using sub = Subscriber<type>;                   \
     using pub = Publisher<type>;                    \
+    using msg_##type = MessagePipe<type>;           \
     class_<sub>("Subscriber_"#type, init<>())       \
         .def(init<std::string>())                   \
         .def(init<std::string, size_t>())           \
@@ -322,6 +323,7 @@ namespace umt {
         .def("reset", &pub::reset)                  \
         .def("bind", &pub::bind)                    \
         .def("push", &pub::push);                   \
+    UMT_EXPORT_PYTHON_OBJ_MANAGER(msg_##type);      \
 }while(0)
 
 #endif /* _UMT_WITH_BOOST_PYTHON_ */

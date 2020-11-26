@@ -131,20 +131,27 @@ namespace umt {
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 
+namespace umt {
+    /// 导出静态函数类时，防止由于类无法拷贝构造而无法导出
+    template<class T>
+    struct export_static_class {
+    };
+};
+
 /// 导出一个类型的对象管理器至python（被管理的对象类型本身需要另外手动导出至python）。
 #define UMT_EXPORT_PYTHON_OBJ_MANAGER(type) do{                                         \
     static_assert(std::is_default_constructible_v<type>,                                \
         "UMT_EXPORT_PYTHON_OBJ_MANAGER: type must has a default constructor");          \
     using namespace boost::python;                                                      \
     using namespace umt;                                                                \
-    class_<ObjManager<type>>("ObjManager_"#type, no_init)                               \
+    class_<export_static_class<ObjManager<type>>>("ObjManager_"#type, no_init)          \
         .def("create", &ObjManager<type>::create<>)                                     \
         .def("find", &ObjManager<type>::find)                                           \
         .def("find_or_create", &ObjManager<type>::find_or_create<>)                     \
         .def("names", &ObjManager<type>::names);                                        \
     register_ptr_to_python<std::shared_ptr<type>>();                                    \
     class_<std::vector<std::string>>("vector_string")                                   \
-        .def(vector_indexing_suite<std::vector<std::string>>());                                                  \
+        .def(vector_indexing_suite<std::vector<std::string>>());                        \
 }while(0)
 
 #endif /* _UMT_WITH_BOOST_PYTHON_ */
