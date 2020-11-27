@@ -81,19 +81,22 @@ namespace umt {
 }
 
 #ifdef _UMT_WITH_BOOST_PYTHON_
+
 #include <boost/python.hpp>
 
 /// 导出某个类型的Sync同步器到python。
-#define UMT_EXPORT_PYTHON_SYNC(type) do{        \
-    using namespace umt;                        \
-    using namespace boost::python;              \
-    class_<Sync<type>>("Sync_"#type, init<>())  \
-        .def(init<std::string>())               \
-        .def("set", &Sync<type>::set)           \
-        .def("get", &Sync<type>::get)           \
-        .def("wait", &Sync<type>::wait)         \
-        .def("wait_for", &Sync<type>::wait_for);\
+#define UMT_EXPORT_PYTHON_SYNC_ALIAS(type, name) do{    \
+    using namespace umt;                                \
+    using namespace boost::python;                      \
+    class_<Sync<type>>("Sync_"#name, init<>())          \
+        .def(init<std::string>())                       \
+        .def("set", &Sync<type>::set)                   \
+        .def("get", &Sync<type>::get)                   \
+        .def("wait", &Sync<type>::wait)                 \
+        .def("wait_for", &Sync<type>::wait_for);        \
 }while(0)
+
+#define UMT_EXPORT_PYTHON_SYNC(type) UMT_EXPORT_PYTHON_SYNC_ALIAS(type, type)
 
 #endif /* _UMT_WITH_BOOST_PYTHON_ */
 
